@@ -30,6 +30,7 @@ import {Version, VersionsMap} from '../version';
 import {TagName} from '../util/tag-name';
 import {Release} from '../release';
 import {ReleasePullRequest} from '../release-pull-request';
+import {filterCommits} from '../util/filter-commits';
 import {logger as defaultLogger, Logger} from '../util/logger';
 import {PullRequestTitle} from '../util/pull-request-title';
 import {BranchName} from '../util/branch-name';
@@ -219,7 +220,10 @@ export abstract class BaseStrategy implements Strategy {
     latestRelease?: Release,
     commits?: Commit[]
   ): Promise<string> {
-    return await this.changelogNotes.buildNotes(conventionalCommits, {
+    const commitsForNotes = this.changelogSections
+      ? filterCommits(conventionalCommits, this.changelogSections)
+      : conventionalCommits;
+    return await this.changelogNotes.buildNotes(commitsForNotes, {
       host: this.changelogHost,
       owner: this.repository.owner,
       repository: this.repository.repo,
