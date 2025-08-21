@@ -81,7 +81,8 @@ export function filterCommits(
 
   return commits.filter(commit => {
     const isBreaking = commit.notes.find(note => note.title === BREAKING_CHANGE_NOTE);
-    const subject = commit.bareMessage || commit.message;
+    // Use full header (e.g., "ASD-123: subject") to allow regex on ticket-like prefixes
+    const subject = commit.message || commit.bareMessage;
 
     const matchesVisible =
       visibleExactTypes.includes(commit.type) ||

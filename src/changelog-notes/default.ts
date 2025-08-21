@@ -103,7 +103,8 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       // when the commit subject matches a configured regex pattern.
       let mappedType = commit.type;
       if (regexMatchers.length > 0) {
-        const subject = commit.bareMessage || commit.message;
+        // Prefer full header for regex (e.g., "ASD-123: subject")
+        const subject = commit.message || commit.bareMessage;
         const matcher = regexMatchers.find(m => m.regex.test(subject));
         if (matcher) {
           mappedType = matcher.syntheticType;
