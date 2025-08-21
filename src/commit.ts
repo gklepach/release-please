@@ -439,6 +439,22 @@ export function parseConventionalCommits(
           }`
         );
         logger.debug(`error message: ${_err}`);
+        // Fallback: include non-conventional commit as a generic commit so that
+        // regex-based changelog sections can match its subject. This does not
+        // affect version bump semantics since type is a non-user-facing default.
+        const subject = commitMessage.split('\n')[0];
+        conventionalCommits.push({
+          sha: commit.sha,
+          message: subject,
+          files: commit.files,
+          pullRequest: commit.pullRequest,
+          type: 'chore',
+          scope: null,
+          bareMessage: subject,
+          notes: [],
+          references: [],
+          breaking: false,
+        });
       }
     }
   }
