@@ -63,28 +63,9 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     };
 
     const config: {[key: string]: ChangelogSection[]} = {};
-    // Default sections closely aligned with internal filtering, keep most hidden (e.g., docs)
-    // and add a visible Others section for non-conventional/JIRA-like commits.
-    const defaultTypes: ChangelogSection[] = [
-      {type: 'feat', section: 'Features'},
-      {type: 'fix', section: 'Bug Fixes'},
-      {type: 'perf', section: 'Performance Improvements'},
-      {type: 'revert', section: 'Reverts'},
-      {type: 'chore', section: 'Miscellaneous Chores', hidden: true},
-      {type: 'docs', section: 'Documentation', hidden: true},
-      {type: 'style', section: 'Styles', hidden: true},
-      {type: 'refactor', section: 'Code Refactoring', hidden: true},
-      {type: 'test', section: 'Tests', hidden: true},
-      {type: 'build', section: 'Build System', hidden: true},
-      {type: 'ci', section: 'Continuous Integration', hidden: true},
-    ];
-    const types: ChangelogSection[] = options.changelogSections
-      ? [...options.changelogSections]
-      : defaultTypes;
-    if (!types.find(t => t.type === 'others')) {
-      types.push({type: 'others', section: 'Others'});
+    if (options.changelogSections) {
+      config.types = options.changelogSections;
     }
-    config.types = types;
     const preset = await presetFactory(config);
     preset.writerOpts.commitPartial =
       this.commitPartial || preset.writerOpts.commitPartial;
@@ -92,53 +73,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       this.headerPartial || preset.writerOpts.headerPartial;
     preset.writerOpts.mainTemplate =
       this.mainTemplate || preset.writerOpts.mainTemplate;
-    const sectionTypes: string[] = (config.types || []).map(t => t.type);
-    const jiraLike = /^[A-Z][A-Z0-9]+-\d+$/;
-
-    // Optionally augment with non-conventional raw commits (no type, no JIRA-like prefix)
-    let augmentedCommits: ConventionalCommit[] = commits;
-    if (options.commits && options.commits.length > 0) {
-      const includedShas = new Set(commits.map(c => c.sha));
-      const isConventionalHeader = /^[a-z]+(\(.*\))?!?:\s/;
-      const hasLetters = /[A-Za-z]/;
-      const extras: ConventionalCommit[] = [];
-      for (const raw of options.commits) {
-        if (includedShas.has(raw.sha)) continue;
-        const firstLine = (raw.message.split(/\r?\n/)[0] || '').trim();
-        if (!firstLine) continue;
-        if (!hasLetters.test(firstLine)) continue; // avoid adding pure numeric like versions
-        if (isConventionalHeader.test(firstLine)) continue;
-        // Include any non-conventional commit lines (covers
-        // INFRA-123 test..., INFRA-123: test..., INFRA-123-test..., [INFRA-123] test...)
-        extras.push({
-          sha: raw.sha,
-          message: firstLine,
-          files: raw.files,
-          pullRequest: raw.pullRequest,
-          type: 'others',
-          scope: null,
-          bareMessage: firstLine,
-          notes: [],
-          references: [],
-          breaking: false,
-        });
-      }
-      if (extras.length > 0) {
-        augmentedCommits = commits.concat(extras);
-      }
-    }
-
-    const changelogCommits = augmentedCommits.map(commit => {
-      // Map unknown types like JIRA keys (ABC-123) into 'others'
-      const normalizedType =
-        sectionTypes.includes(commit.type) || !jiraLike.test(commit.type)
-          ? commit.type
-          : 'others';
-      // Preserve JIRA key prefix in subject for Others
-      const subjectText =
-        normalizedType === 'others' && jiraLike.test(commit.type)
-          ? `${commit.type}: ${commit.bareMessage}`
-          : commit.bareMessage;
+    const changelogCommits = commits.map(commit => {
       const notes = commit.notes
         .filter(note => note.title === 'BREAKING CHANGE')
         .map(note =>
@@ -151,8 +86,8 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         );
       return {
         body: '', // commit.body,
-        subject: htmlEscape(subjectText),
-        type: normalizedType,
+        subject: htmlEscape(commit.bareMessage),
+        type: commit.type,
         scope: commit.scope,
         notes,
         references: commit.references,

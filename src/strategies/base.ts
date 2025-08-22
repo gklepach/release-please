@@ -282,18 +282,50 @@ export abstract class BaseStrategy implements Strategy {
     bumpOnlyOptions?: BumpReleaseOptions
   ): Promise<ReleasePullRequest | undefined> {
     const conventionalCommits = await this.postProcessCommits(commits);
-    this.logger.info(`Considering: ${conventionalCommits.length} commits`);
-    if (!bumpOnlyOptions && conventionalCommits.length === 0) {
+    // Augment with non-conventional commits so they can trigger at least a patch bump
+    let augmentedConventionalCommits = conventionalCommits;
+    if (this.latestRawCommits && this.latestRawCommits.length > 0) {
+      const includedShas = new Set(conventionalCommits.map(c => c.sha));
+      const isConventionalHeader = /^[a-z]+(\(.*\))?!?:\s/;
+      const hasLetters = /[A-Za-z]/;
+      const extras: ConventionalCommit[] = [];
+      for (const raw of this.latestRawCommits) {
+        if (includedShas.has(raw.sha)) continue;
+        const firstLine = (raw.message.split(/\r?\n/)[0] || '').trim();
+        if (!firstLine) continue;
+        if (!hasLetters.test(firstLine)) continue; // ignore purely non-informative lines
+        if (isConventionalHeader.test(firstLine)) continue; // already parsed elsewhere
+        extras.push({
+          sha: raw.sha,
+          message: firstLine,
+          files: raw.files,
+          pullRequest: raw.pullRequest,
+          type: 'others',
+          scope: null,
+          bareMessage: firstLine,
+          notes: [],
+          references: [],
+          breaking: false,
+        });
+      }
+      if (extras.length > 0) {
+        augmentedConventionalCommits = conventionalCommits.concat(extras);
+      }
+    }
+    this.logger.info(
+      `Considering: ${augmentedConventionalCommits.length} commits (including Others)`
+    );
+    if (!bumpOnlyOptions && augmentedConventionalCommits.length === 0) {
       this.logger.info(`No commits for path: ${this.path}, skipping`);
       return undefined;
     }
 
     const newVersion =
       bumpOnlyOptions?.newVersion ??
-      (await this.buildNewVersion(conventionalCommits, latestRelease));
+      (await this.buildNewVersion(augmentedConventionalCommits, latestRelease));
     const versionsMap = await this.updateVersionsMap(
-      await this.buildVersionsMap(conventionalCommits),
-      conventionalCommits,
+      await this.buildVersionsMap(augmentedConventionalCommits),
+      augmentedConventionalCommits,
       newVersion
     );
     const component = await this.getComponent();
@@ -342,7 +374,7 @@ export abstract class BaseStrategy implements Strategy {
       newVersion,
       versionsMap,
       latestVersion: latestRelease?.tag.version,
-      commits: conventionalCommits,
+      commits: augmentedConventionalCommits,
     });
     const updatesWithExtras = mergeUpdates(
       updates.concat(
