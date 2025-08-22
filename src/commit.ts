@@ -416,6 +416,10 @@ export function parseConventionalCommits(
     )) {
       try {
         for (const parsedCommit of parseCommits(commitMessage)) {
+          if (!parsedCommit.type) {
+            // Skip non-conventional messages (no type)
+            continue;
+          }
           const breaking =
             parsedCommit.notes.filter(note => note.title === 'BREAKING CHANGE')
               .length > 0;

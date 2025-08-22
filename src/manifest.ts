@@ -750,6 +750,9 @@ export class Manifest {
 
       const strategy = strategies[path];
       const latestRelease = releasesByPath[path];
+      if (typeof (strategy as any).setRawCommitsForRelease === 'function') {
+        (strategy as any).setRawCommitsForRelease(commitsPerPath[path]);
+      }
       const releasePullRequest = await strategy.buildReleasePullRequest(
         pathCommits,
         latestRelease,

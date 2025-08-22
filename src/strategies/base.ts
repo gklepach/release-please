@@ -125,6 +125,9 @@ export abstract class BaseStrategy implements Strategy {
   // CHANGELOG configuration
   protected changelogSections?: ChangelogSection[];
 
+  // Raw commits for release notes augmentation
+  private latestRawCommits?: Commit[];
+
   constructor(options: BaseStrategyOptions) {
     this.logger = options.logger ?? defaultLogger;
     this.path = options.path || ROOT_PROJECT_PATH;
@@ -218,7 +221,7 @@ export abstract class BaseStrategy implements Strategy {
     newVersion: Version,
     newVersionTag: TagName,
     latestRelease?: Release,
-    commits?: Commit[]
+    _commits?: Commit[]
   ): Promise<string> {
     const commitsForNotes = this.changelogSections
       ? filterCommits(conventionalCommits, this.changelogSections)
@@ -232,7 +235,7 @@ export abstract class BaseStrategy implements Strategy {
       currentTag: newVersionTag.toString(),
       targetBranch: this.targetBranch,
       changelogSections: this.changelogSections,
-      commits: commits,
+      commits: this.latestRawCommits,
     });
   }
 
@@ -260,6 +263,10 @@ export abstract class BaseStrategy implements Strategy {
     );
   }
 
+  public setRawCommitsForRelease(commits: Commit[] | undefined) {
+    this.latestRawCommits = commits;
+  }
+
   /**
    * Builds a candidate release pull request
    * @param {Commit[]} commits Raw commits to consider for this release.
@@ -279,18 +286,50 @@ export abstract class BaseStrategy implements Strategy {
     bumpOnlyOptions?: BumpReleaseOptions
   ): Promise<ReleasePullRequest | undefined> {
     const conventionalCommits = await this.postProcessCommits(commits);
-    this.logger.info(`Considering: ${conventionalCommits.length} commits`);
-    if (!bumpOnlyOptions && conventionalCommits.length === 0) {
+    // Augment with non-conventional commits so they can trigger at least a patch bump
+    let augmentedConventionalCommits = conventionalCommits;
+    if (this.latestRawCommits && this.latestRawCommits.length > 0) {
+      const includedShas = new Set(conventionalCommits.map(c => c.sha));
+      const isConventionalHeader = /^[a-z]+(\(.*\))?!?:\s/;
+      const hasLetters = /[A-Za-z]/;
+      const extras: ConventionalCommit[] = [];
+      for (const raw of this.latestRawCommits) {
+        if (includedShas.has(raw.sha)) continue;
+        const firstLine = (raw.message.split(/\r?\n/)[0] || '').trim();
+        if (!firstLine) continue;
+        if (!hasLetters.test(firstLine)) continue; // ignore purely non-informative lines
+        if (isConventionalHeader.test(firstLine)) continue; // already parsed elsewhere
+        extras.push({
+          sha: raw.sha,
+          message: firstLine,
+          files: raw.files,
+          pullRequest: raw.pullRequest,
+          type: 'others',
+          scope: null,
+          bareMessage: firstLine,
+          notes: [],
+          references: [],
+          breaking: false,
+        });
+      }
+      if (extras.length > 0) {
+        augmentedConventionalCommits = conventionalCommits.concat(extras);
+      }
+    }
+    this.logger.info(
+      `Considering: ${augmentedConventionalCommits.length} commits (including Others)`
+    );
+    if (!bumpOnlyOptions && augmentedConventionalCommits.length === 0) {
       this.logger.info(`No commits for path: ${this.path}, skipping`);
       return undefined;
     }
 
     const newVersion =
       bumpOnlyOptions?.newVersion ??
-      (await this.buildNewVersion(conventionalCommits, latestRelease));
+      (await this.buildNewVersion(augmentedConventionalCommits, latestRelease));
     const versionsMap = await this.updateVersionsMap(
-      await this.buildVersionsMap(conventionalCommits),
-      conventionalCommits,
+      await this.buildVersionsMap(augmentedConventionalCommits),
+      augmentedConventionalCommits,
       newVersion
     );
     const component = await this.getComponent();
@@ -319,13 +358,21 @@ export abstract class BaseStrategy implements Strategy {
       ? BranchName.ofComponentTargetBranch(branchComponent, this.targetBranch)
       : BranchName.ofTargetBranch(this.targetBranch);
     const releaseNotesBody = await this.buildReleaseNotes(
-      conventionalCommits,
+      augmentedConventionalCommits,
       newVersion,
       newVersionTag,
       latestRelease,
       commits
     );
-    if (!bumpOnlyOptions && this.changelogEmpty(releaseNotesBody)) {
+    // If release notes appear empty but we augmented with Others commits,
+    // proceed anyway to open a PR (ensures non-conventional commits create a patch release).
+    const augmentedAddedExtras =
+      augmentedConventionalCommits.length > conventionalCommits.length;
+    if (
+      !bumpOnlyOptions &&
+      this.changelogEmpty(releaseNotesBody) &&
+      !augmentedAddedExtras
+    ) {
       this.logger.info(
         `No user facing commits found since ${
           latestRelease ? latestRelease.sha : 'beginning of time'
@@ -339,7 +386,7 @@ export abstract class BaseStrategy implements Strategy {
       newVersion,
       versionsMap,
       latestVersion: latestRelease?.tag.version,
-      commits: conventionalCommits,
+      commits: augmentedConventionalCommits,
     });
     const updatesWithExtras = mergeUpdates(
       updates.concat(
