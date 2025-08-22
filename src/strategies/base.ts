@@ -354,7 +354,7 @@ export abstract class BaseStrategy implements Strategy {
       ? BranchName.ofComponentTargetBranch(branchComponent, this.targetBranch)
       : BranchName.ofTargetBranch(this.targetBranch);
     const releaseNotesBody = await this.buildReleaseNotes(
-      conventionalCommits,
+      augmentedConventionalCommits,
       newVersion,
       newVersionTag,
       latestRelease,
