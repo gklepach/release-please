@@ -233,6 +233,7 @@ export abstract class BaseStrategy implements Strategy {
       changelogSections: this.changelogSections,
       commits: this.latestRawCommits,
       trackerUrl: (this as any).trackerUrl,
+      trackerList: (this as any).trackerList,
     });
   }
 

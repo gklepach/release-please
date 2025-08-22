@@ -25,6 +25,7 @@ export interface BuildNotesOptions {
   changelogSections?: ChangelogSection[];
   commits?: Commit[];
   trackerUrl?: string;
+  trackerList?: string;
 }
 
 export interface ChangelogNotes {

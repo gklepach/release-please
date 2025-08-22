@@ -143,6 +143,9 @@ export async function buildStrategy(
   if ((options as any)['tracker-url']) {
     (strategyOptions as any).trackerUrl = (options as any)['tracker-url'];
   }
+  if ((options as any)['tracker-list']) {
+    (strategyOptions as any).trackerList = (options as any)['tracker-list'];
+  }
 
   const builder = releasers[options.releaseType];
   if (builder) {

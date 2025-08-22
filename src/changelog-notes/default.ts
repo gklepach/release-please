@@ -73,8 +73,15 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       this.headerPartial || preset.writerOpts.headerPartial;
     preset.writerOpts.mainTemplate =
       this.mainTemplate || preset.writerOpts.mainTemplate;
-    const jiraHeader = /^(\[[A-Z][A-Z0-9]+-\d+\]|[A-Z][A-Z0-9]+-\d+):\s/;
-    const jiraKeyExtract = /^(?:\[)?([A-Z][A-Z0-9]+-\d+)(?:\])?:\s(.*)$/;
+    const trackerList = (options as any).trackerList as string | undefined;
+    const trackerPrefixes = trackerList
+      ? trackerList.split(',').map(s => s.trim()).filter(Boolean)
+      : undefined;
+    const prefixClass = trackerPrefixes && trackerPrefixes.length
+      ? `(?:${trackerPrefixes.map(p => p.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})`
+      : '[A-Z][A-Z0-9]+';
+    const jiraHeader = new RegExp(`^(\\[${prefixClass}-\\d+\\]|${prefixClass}-\\d+):\\s`);
+    const jiraKeyExtract = new RegExp(`^(?:\\[)?(${prefixClass}-\\d+)(?:\\])?:\\s(.*)$`);
     const changelogCommits = commits.map(commit => {
       const notes = commit.notes
         .filter(note => note.title === 'BREAKING CHANGE')
