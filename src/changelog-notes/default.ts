@@ -116,7 +116,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       lines.push('### Others');
       lines.push('');
       for (const c of others) {
-        const shortSha = (c as any).hash || c.hash || c.sha;
+        const shortSha = (c as any).hash || '';
         const sha7 = shortSha ? String(shortSha).slice(0, 7) : '';
         const link = sha7
           ? `([${sha7}](${context.host}/${context.owner}/${context.repository}/commit/${shortSha}))`
