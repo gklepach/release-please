@@ -66,7 +66,6 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     if (options.changelogSections) {
       config.types = options.changelogSections;
     }
-    const preset = await presetFactory(config);
     preset.writerOpts.commitPartial =
       this.commitPartial || preset.writerOpts.commitPartial;
     preset.writerOpts.headerPartial =
@@ -79,7 +78,9 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     const issueKeyRegex = trackerPrefixes
       ? new RegExp(`(?:^|[^A-Z0-9])((?:${trackerPrefixes.map(p => p.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})-\\d+)`, 'g')
       : /(?:^|[^A-Z0-9])(([A-Z][A-Z0-9]+-\d+))/g;
+    const seenShas = new Set<string>();
     const changelogCommits = commits.map(commit => {
+      if (commit.sha) seenShas.add(commit.sha);
       const notes = commit.notes
         .filter(note => note.title === 'BREAKING CHANGE')
         .map(note =>
@@ -113,7 +114,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         mentions: [],
         merge: null,
         revert: null,
-        header: subject,
+        header: commit.message,
         footer: commit.notes
           .filter(note => note.title === 'RELEASE AS')
           .map(note => `Release-As: ${note.text}`)
@@ -121,6 +122,56 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         hash: commit.sha,
       };
     });
+
+    // Add raw commits that look like issue-key headers but were not parsed as conventional commits
+    if (options.commits) {
+      const rawIssueHeader = /^(\[[A-Z][A-Z0-9]+-\d+\]|[A-Z][A-Z0-9]+-\d+)\b/;
+      const conventionalHeader = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.*?\))?:\s/;
+      const mergeHeader = /^Merge\b/;
+      const skipRelease = /release[- ]please|^chore\(main\): release/i;
+      for (const raw of options.commits) {
+        if (seenShas.has(raw.sha)) continue;
+        const msg = raw.message.split('\n')[0];
+        // Include if it has an issue-like header OR it's a non-conventional, non-merge miscellaneous commit
+        if (!rawIssueHeader.test(msg)) {
+          if (conventionalHeader.test(msg)) continue;
+          if (mergeHeader.test(msg)) continue;
+          if (skipRelease.test(msg)) continue;
+        }
+        let subject = htmlEscape(msg);
+        if (trackerUrl) {
+          subject = subject.replace(issueKeyRegex, (m: string, key: string) => {
+            const prefix = m.slice(0, m.indexOf(key));
+            const link = `[${key}](${trackerUrl}${key})`;
+            return `${prefix}${link}`;
+          });
+        }
+        changelogCommits.push({
+          body: '',
+          subject,
+          type: 'others',
+          scope: null,
+          notes: [],
+          references: [],
+          mentions: [],
+          merge: null,
+          revert: null,
+          header: msg,
+          footer: '',
+          hash: raw.sha,
+        });
+      }
+    }
+
+    // Ensure 'others' section exists if we added any others
+    if (changelogCommits.some(c => c.type === 'others')) {
+      const types = (config.types = config.types || []);
+      if (!types.find(t => t.type === 'others')) {
+        types.push({type: 'others', section: 'Others'});
+      }
+    }
+
+    const preset = await presetFactory(config);
 
     const rendered = conventionalChangelogWriter
       .parseArray(changelogCommits, context, preset.writerOpts)
