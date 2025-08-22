@@ -44,9 +44,9 @@ export interface Strategy {
    * @param {boolean} draft Optional. Whether or not to create the pull
    *   request as a draft. Defaults to `false`.
    * @param {BumpReleaseOptions} bumpOnlyOptions Optional. Options, that when
-   * present, indicate a release should be created even if there are no
-   * conventional commits. This is used when a release is required for
-   * a dependency update with a workspace plugin.
+   *   present, indicate a release should be created even if there are no
+   *   conventional commits. This is used when a release is required for
+   *   a dependency update with a workspace plugin.
    * @returns {ReleasePullRequest | undefined} The release pull request to
    *   open for this path/component. Returns undefined if we should not
    *   open a pull request.
@@ -99,4 +99,11 @@ export interface Strategy {
    * @returns true of release is valid, false if it should be skipped.
    */
   isPublishedVersion?(version: Version): boolean;
+
+  /**
+   * Optional hook for passing raw commits into the strategy for use when
+   * building release notes (e.g., to include non-conventional commits
+   * in an "Others" section).
+   */
+  setRawCommitsForRelease?(commits: Commit[] | undefined): void;
 }
