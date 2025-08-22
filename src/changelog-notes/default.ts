@@ -74,6 +74,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     preset.writerOpts.mainTemplate =
       this.mainTemplate || preset.writerOpts.mainTemplate;
     const jiraHeader = /^(\[[A-Z][A-Z0-9]+-\d+\]|[A-Z][A-Z0-9]+-\d+):\s/;
+    const jiraKeyExtract = /^(?:\[)?([A-Z][A-Z0-9]+-\d+)(?:\])?:\s(.*)$/;
     const changelogCommits = commits.map(commit => {
       const notes = commit.notes
         .filter(note => note.title === 'BREAKING CHANGE')
@@ -87,9 +88,23 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         );
       const headerLine = commit.message;
       const isJiraHeader = jiraHeader.test(headerLine);
-      const subject = isJiraHeader
-        ? htmlEscape(headerLine)
-        : htmlEscape(commit.bareMessage);
+      let subject = htmlEscape(commit.bareMessage);
+      if (isJiraHeader) {
+        // Replace JIRA key with external tracker link if configured
+        const m = headerLine.match(jiraKeyExtract);
+        if (m) {
+          const key = m[1];
+          const rest = m[2];
+          if ((options as any).trackerUrl) {
+            const tracker = (options as any).trackerUrl as string;
+            subject = `[${key}](${tracker.replace(/\/?$/, '/')}${key}): ${htmlEscape(rest)}`;
+          } else {
+            subject = htmlEscape(headerLine);
+          }
+        } else {
+          subject = htmlEscape(headerLine);
+        }
+      }
       const type = isJiraHeader ? 'others' : commit.type;
       return {
         body: '', // commit.body,

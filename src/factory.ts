@@ -139,6 +139,10 @@ export async function buildStrategy(
     versioningStrategy,
     changelogNotes,
   };
+  // propagate tracker-url (if present) to strategies via dynamic field
+  if ((options as any)['tracker-url']) {
+    (strategyOptions as any).trackerUrl = (options as any)['tracker-url'];
+  }
 
   const builder = releasers[options.releaseType];
   if (builder) {
