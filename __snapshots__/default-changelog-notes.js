@@ -65,6 +65,16 @@ exports['DefaultChangelogNotes buildNotes should ignore RELEASE AS notes 1'] = `
 * some bugfix ([sha2](https://github.com/googleapis/java-asset/commit/sha2))
 `
 
+exports['DefaultChangelogNotes buildNotes should include JIRA-like colon commits under Others 1'] = `
+## [1.2.3](https://github.com/googleapis/java-asset/compare/v1.2.2...v1.2.3) (1983-10-10)
+
+
+### Others
+
+* ASD-123: Update README.md ([80b1869](https://github.com/googleapis/java-asset/commit/80b18696c3f793a777e9124df4abcd08))
+* INFRA-893: test commit name bla bla ([f234274](https://github.com/googleapis/java-asset/commit/f2342745598118cfaca2c7b96d92b822))
+`
+
 exports['DefaultChangelogNotes buildNotes should include non-conventional commits under Others 1'] = `
 ## [1.2.3](https://github.com/googleapis/java-asset/compare/v1.2.2...v1.2.3) (1983-10-10)
 

@@ -100,7 +100,6 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     if (options.commits && options.commits.length > 0) {
       const includedShas = new Set(commits.map(c => c.sha));
       const isConventionalHeader = /^[a-z]+(\(.*\))?!?:\s/;
-      const isJiraHeader = /^[A-Z][A-Z0-9]+-\d+:\s/;
       const hasLetters = /[A-Za-z]/;
       const extras: ConventionalCommit[] = [];
       for (const raw of options.commits) {
@@ -109,7 +108,8 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         if (!firstLine) continue;
         if (!hasLetters.test(firstLine)) continue; // avoid adding pure numeric like versions
         if (isConventionalHeader.test(firstLine)) continue;
-        if (isJiraHeader.test(firstLine)) continue; // parsed separately
+        // Include any non-conventional commit lines (covers
+        // INFRA-123 test..., INFRA-123: test..., INFRA-123-test..., [INFRA-123] test...)
         extras.push({
           sha: raw.sha,
           message: firstLine,
@@ -134,6 +134,11 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         sectionTypes.includes(commit.type) || !jiraLike.test(commit.type)
           ? commit.type
           : 'others';
+      // Preserve JIRA key prefix in subject for Others
+      const subjectText =
+        normalizedType === 'others' && jiraLike.test(commit.type)
+          ? `${commit.type}: ${commit.bareMessage}`
+          : commit.bareMessage;
       const notes = commit.notes
         .filter(note => note.title === 'BREAKING CHANGE')
         .map(note =>
@@ -146,7 +151,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         );
       return {
         body: '', // commit.body,
-        subject: htmlEscape(commit.bareMessage),
+        subject: htmlEscape(subjectText),
         type: normalizedType,
         scope: commit.scope,
         notes,
