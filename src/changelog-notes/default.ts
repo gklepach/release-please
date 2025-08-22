@@ -74,6 +74,11 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     preset.writerOpts.mainTemplate =
       this.mainTemplate || preset.writerOpts.mainTemplate;
     const jiraHeader = /^(\[[A-Z][A-Z0-9]+-\d+\]|[A-Z][A-Z0-9]+-\d+):\s/;
+    const trackerPrefixes = options.trackerList && options.trackerList.length > 0 ? options.trackerList : undefined;
+    const trackerUrl = options.trackerUrl;
+    const issueKeyRegex = trackerPrefixes
+      ? new RegExp(`(?:^|[^A-Z0-9])((?:${trackerPrefixes.map(p => p.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})-\\d+)`, 'g')
+      : /(?:^|[^A-Z0-9])(([A-Z][A-Z0-9]+-\d+))/g;
     const changelogCommits = commits.map(commit => {
       const notes = commit.notes
         .filter(note => note.title === 'BREAKING CHANGE')
@@ -87,9 +92,16 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         );
       const headerLine = commit.message;
       const isJiraHeader = jiraHeader.test(headerLine);
-      const subject = isJiraHeader
+      let subject = isJiraHeader
         ? htmlEscape(headerLine)
         : htmlEscape(commit.bareMessage);
+      if (trackerUrl) {
+        subject = subject.replace(issueKeyRegex, (m: string, key: string) => {
+          const prefix = m.slice(0, m.indexOf(key));
+          const link = `[${key}](${trackerUrl}${key})`;
+          return `${prefix}${link}`;
+        });
+      }
       const type = isJiraHeader ? 'others' : commit.type;
       return {
         body: '', // commit.body,
@@ -101,7 +113,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         mentions: [],
         merge: null,
         revert: null,
-        header: commit.message,
+        header: subject,
         footer: commit.notes
           .filter(note => note.title === 'RELEASE AS')
           .map(note => `Release-As: ${note.text}`)

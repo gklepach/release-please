@@ -74,6 +74,8 @@ function releaserConfigToJsonConfig(
     'include-v-in-tag': config.includeVInTag,
     'changelog-type': config.changelogType,
     'changelog-host': config.changelogHost,
+    'tracker-url': config.trackerUrl,
+    'tracker-list': config.trackerList?.join(','),
     'pull-request-title-pattern': config.pullRequestTitlePattern,
     'pull-request-header': config.pullRequestHeader,
     'pull-request-footer': config.pullRequestFooter,

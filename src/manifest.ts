@@ -130,6 +130,9 @@ export interface ReleaserConfig {
   changelogPath?: string;
   changelogType?: ChangelogNotesType;
   changelogHost?: string;
+  // Issue tracker linking
+  trackerUrl?: string;
+  trackerList?: string[];
 
   // Ruby-only
   versionFile?: string;
@@ -174,6 +177,8 @@ interface ReleaserConfigJson {
   'include-v-in-tag'?: boolean;
   'changelog-type'?: ChangelogNotesType;
   'changelog-host'?: string;
+  'tracker-url'?: string;
+  'tracker-list'?: string;
   'pull-request-title-pattern'?: string;
   'pull-request-header'?: string;
   'pull-request-footer'?: string;
@@ -1384,6 +1389,8 @@ function extractReleaserConfig(
     changelogSections: config['changelog-sections'],
     changelogPath: config['changelog-path'],
     changelogHost: config['changelog-host'],
+    trackerUrl: config['tracker-url'],
+    trackerList: config['tracker-list']?.split(',').map(s => s.trim()).filter(Boolean),
     releaseAs: config['release-as'],
     skipGithubRelease: config['skip-github-release'],
     skipChangelog: config['skip-changelog'],

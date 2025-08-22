@@ -95,6 +95,14 @@
           "description": "Generate changelog links to this GitHub host. Useful for running against GitHub Enterprise.",
           "type": "string"
         },
+        "tracker-url": {
+          "description": "Base URL for external issue tracker linking, e.g. https://linear.app/org/issue/",
+          "type": "string"
+        },
+        "tracker-list": {
+          "description": "Comma-separated list of allowed issue key prefixes (e.g., INFRA, QA).",
+          "type": "string"
+        },
         "changelog-path": {
           "description": "Path to the file that tracks release note changes. Defaults to `CHANGELOG.md`.",
           "type": "string"
@@ -473,6 +481,8 @@
     "include-v-in-tag": true,
     "changelog-type": true,
     "changelog-host": true,
+    "tracker-url": true,
+    "tracker-list": true,
     "changelog-path": true,
     "pull-request-title-pattern": true,
     "pull-request-header": true,

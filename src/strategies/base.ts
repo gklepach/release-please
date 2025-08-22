@@ -87,6 +87,9 @@ export interface BaseStrategyOptions {
   initialVersion?: string;
   extraLabels?: string[];
   dateFormat?: string;
+  // External tracker
+  trackerUrl?: string;
+  trackerList?: string[];
 }
 
 /**
@@ -118,6 +121,8 @@ export abstract class BaseStrategy implements Strategy {
   readonly extraFiles: ExtraFile[];
   readonly extraLabels: string[];
   protected dateFormat: string;
+  protected trackerUrl?: string;
+  protected trackerList?: string[];
 
   readonly changelogNotes: ChangelogNotes;
 
@@ -158,6 +163,8 @@ export abstract class BaseStrategy implements Strategy {
     this.initialVersion = options.initialVersion;
     this.extraLabels = options.extraLabels || [];
     this.dateFormat = options.dateFormat || DEFAULT_DATE_FORMAT;
+    this.trackerUrl = options.trackerUrl;
+    this.trackerList = options.trackerList;
   }
 
   /**
@@ -232,6 +239,8 @@ export abstract class BaseStrategy implements Strategy {
       targetBranch: this.targetBranch,
       changelogSections: this.changelogSections,
       commits: this.latestRawCommits,
+      trackerUrl: this.trackerUrl,
+      trackerList: this.trackerList,
     });
   }
 

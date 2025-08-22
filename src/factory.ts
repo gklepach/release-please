@@ -130,6 +130,7 @@ export async function buildStrategy(
     type: options.changelogType || 'default',
     github: options.github,
     changelogSections: options.changelogSections,
+    // pass through template overrides if present (commit/header/main)
   });
   const strategyOptions: BaseStrategyOptions = {
     skipGitHubRelease: options.skipGithubRelease, // Note the case difference in GitHub
@@ -138,6 +139,8 @@ export async function buildStrategy(
     targetBranch,
     versioningStrategy,
     changelogNotes,
+    trackerUrl: options.trackerUrl,
+    trackerList: options.trackerList,
   };
 
   const builder = releasers[options.releaseType];
