@@ -158,14 +158,6 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       }
     }
 
-    // Ensure 'others' section exists if we added any others
-    if (changelogCommits.some(c => c.type === 'others')) {
-      const types = (config.types = config.types || []);
-      if (!types.find(t => t.type === 'others')) {
-        types.push({type: 'others', section: 'Others'});
-      }
-    }
-
     const preset = await presetFactory(config);
     preset.writerOpts.commitPartial =
       this.commitPartial || preset.writerOpts.commitPartial;
@@ -174,7 +166,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     preset.writerOpts.mainTemplate =
       this.mainTemplate || preset.writerOpts.mainTemplate;
 
-    const rendered = conventionalChangelogWriter
+    let rendered = conventionalChangelogWriter
       .parseArray(changelogCommits, context, preset.writerOpts)
       .trim();
 
@@ -186,12 +178,20 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     const others = changelogCommits.filter(c => c.type === 'others');
     if (others.length > 0) {
       const lines: string[] = [];
-      // Сохраняем заголовок версии, если writer его сгенерировал:
       if (rendered.length > 0 && !hasSectionsOrBullets) {
+        // Только заголовок — добавим Others целиком
         lines.push(rendered);
         lines.push('');
+        lines.push('### Others');
+      } else if (rendered.length > 0) {
+        // Есть секции — добавим Others в конец
+        lines.push(rendered);
+        lines.push('');
+        lines.push('### Others');
+      } else {
+        // Пусто — просто Others
+        lines.push('### Others');
       }
-      lines.push('### Others');
       lines.push('');
       for (const c of others) {
         const shortSha = (c as any).hash || '';
@@ -201,9 +201,8 @@ export class DefaultChangelogNotes implements ChangelogNotes {
           : '';
         lines.push(`* ${c.subject} ${link}`.trim());
       }
-      return lines.join('\n');
+      rendered = lines.join('\n');
     }
-
     return rendered;
   }
 }
