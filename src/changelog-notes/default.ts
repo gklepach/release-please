@@ -80,8 +80,11 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     const prefixClass = trackerPrefixes && trackerPrefixes.length
       ? `(?:${trackerPrefixes.map(p => p.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})`
       : '[A-Z][A-Z0-9]+';
-    const jiraHeader = new RegExp(`^(\\[${prefixClass}-\\d+\\]|${prefixClass}-\\d+):\\s`);
-    const jiraKeyExtract = new RegExp(`^(?:\\[)?(${prefixClass}-\\d+)(?:\\])?:\\s(.*)$`);
+    // Match headers like "[KEY-123] text", "KEY-123: text", or "KEY-123 text"
+    const jiraHeader = new RegExp(`^(?:\\[${prefixClass}-\\d+\\]|${prefixClass}-\\d+)(?::\\s|\\s+)`);
+    const jiraKeyExtract = new RegExp(
+      `^(?:\\[)?(${prefixClass}-\\d+)(?:\\])?(?::\\s|\\s+)(.*)$`
+    );
     const changelogCommits = commits.map(commit => {
       const notes = commit.notes
         .filter(note => note.title === 'BREAKING CHANGE')
