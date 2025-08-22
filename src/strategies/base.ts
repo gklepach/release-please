@@ -124,6 +124,9 @@ export abstract class BaseStrategy implements Strategy {
   // CHANGELOG configuration
   protected changelogSections?: ChangelogSection[];
 
+  // Raw commits for release notes augmentation
+  private latestRawCommits?: Commit[];
+
   constructor(options: BaseStrategyOptions) {
     this.logger = options.logger ?? defaultLogger;
     this.path = options.path || ROOT_PROJECT_PATH;
@@ -217,7 +220,7 @@ export abstract class BaseStrategy implements Strategy {
     newVersion: Version,
     newVersionTag: TagName,
     latestRelease?: Release,
-    commits?: Commit[]
+    _commits?: Commit[]
   ): Promise<string> {
     return await this.changelogNotes.buildNotes(conventionalCommits, {
       host: this.changelogHost,
@@ -228,7 +231,7 @@ export abstract class BaseStrategy implements Strategy {
       currentTag: newVersionTag.toString(),
       targetBranch: this.targetBranch,
       changelogSections: this.changelogSections,
-      commits: commits,
+      commits: this.latestRawCommits,
     });
   }
 
@@ -254,6 +257,10 @@ export abstract class BaseStrategy implements Strategy {
         footer: pullRequestFooter,
       }
     );
+  }
+
+  public setRawCommitsForRelease(commits: Commit[] | undefined) {
+    this.latestRawCommits = commits;
   }
 
   /**
