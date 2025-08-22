@@ -99,26 +99,34 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       const headerLine = commit.message;
       const isJiraHeader = jiraHeader.test(headerLine);
       let subject = htmlEscape(commit.bareMessage);
-      if (isJiraHeader) {
-        // Replace JIRA key with external tracker link if configured
-        const m = headerLine.match(jiraKeyExtract);
-        if (m) {
+      // helper to build link from a line, if tracker configured
+      const tryLink = (line: string): string | undefined => {
+        const m = line.match(jiraKeyExtract);
+        if (m && (options as any).trackerUrl) {
           const key = m[1];
           const rest = m[2];
-          if ((options as any).trackerUrl) {
-            const tracker = (options as any).trackerUrl as string;
-            subject = `[${key}](${tracker.replace(/\/?$/, '/')}${key}): ${htmlEscape(rest)}`;
-          } else {
-            subject = htmlEscape(headerLine);
-          }
-        } else {
-          subject = htmlEscape(headerLine);
+          const tracker = (options as any).trackerUrl as string;
+          return `[${key}](${tracker.replace(/\/?$/, '/')}${key}): ${htmlEscape(rest)}`;
+        }
+        return undefined;
+      };
+      let type = commit.type;
+      if (isJiraHeader) {
+        // Prefer header
+        const linked = tryLink(headerLine);
+        subject = linked || htmlEscape(headerLine);
+        if (linked) type = 'others';
+      } else {
+        // Fallback: link even if header check failed but pattern is present in bareMessage
+        const linked = tryLink(commit.bareMessage);
+        if (linked) {
+          subject = linked;
+          type = 'others';
         }
       }
-      const type = isJiraHeader ? 'others' : commit.type;
       // Some templates render using `header` instead of `subject`.
-      // To ensure links appear in Others, align header with subject when JIRA header is detected.
-      const headerOut = isJiraHeader && (options as any).trackerUrl
+      // If we generated a linked subject, use it as header as well.
+      const headerOut = subject.startsWith('[') && subject.includes(']:') || subject.includes('): ')
         ? subject
         : commit.message;
       return {
