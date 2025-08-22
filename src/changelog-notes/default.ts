@@ -63,17 +63,16 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     };
 
     const config: {[key: string]: ChangelogSection[]} = {};
-    // Always ensure an "Others" visible section exists so non-conventional
-    // commits are included in the generated notes without extra config.
+    // Default sections closely aligned with internal filtering, keep most hidden (e.g., docs)
+    // and add a visible Others section for non-conventional/JIRA-like commits.
     const defaultTypes: ChangelogSection[] = [
       {type: 'feat', section: 'Features'},
       {type: 'fix', section: 'Bug Fixes'},
       {type: 'perf', section: 'Performance Improvements'},
-      {type: 'deps', section: 'Dependencies'},
       {type: 'revert', section: 'Reverts'},
-      {type: 'docs', section: 'Documentation'},
-      {type: 'style', section: 'Styles', hidden: true},
       {type: 'chore', section: 'Miscellaneous Chores', hidden: true},
+      {type: 'docs', section: 'Documentation', hidden: true},
+      {type: 'style', section: 'Styles', hidden: true},
       {type: 'refactor', section: 'Code Refactoring', hidden: true},
       {type: 'test', section: 'Tests', hidden: true},
       {type: 'build', section: 'Build System', hidden: true},
@@ -93,7 +92,48 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       this.headerPartial || preset.writerOpts.headerPartial;
     preset.writerOpts.mainTemplate =
       this.mainTemplate || preset.writerOpts.mainTemplate;
-    const changelogCommits = commits.map(commit => {
+    const sectionTypes: string[] = (config.types || []).map(t => t.type);
+    const jiraLike = /^[A-Z][A-Z0-9]+-\d+$/;
+
+    // Optionally augment with non-conventional raw commits (no type, no JIRA-like prefix)
+    let augmentedCommits: ConventionalCommit[] = commits;
+    if (options.commits && options.commits.length > 0) {
+      const includedShas = new Set(commits.map(c => c.sha));
+      const isConventionalHeader = /^[a-z]+(\(.*\))?!?:\s/;
+      const isJiraHeader = /^[A-Z][A-Z0-9]+-\d+:\s/;
+      const hasLetters = /[A-Za-z]/;
+      const extras: ConventionalCommit[] = [];
+      for (const raw of options.commits) {
+        if (includedShas.has(raw.sha)) continue;
+        const firstLine = (raw.message.split(/\r?\n/)[0] || '').trim();
+        if (!firstLine) continue;
+        if (!hasLetters.test(firstLine)) continue; // avoid adding pure numeric like versions
+        if (isConventionalHeader.test(firstLine)) continue;
+        if (isJiraHeader.test(firstLine)) continue; // parsed separately
+        extras.push({
+          sha: raw.sha,
+          message: firstLine,
+          files: raw.files,
+          pullRequest: raw.pullRequest,
+          type: 'others',
+          scope: null,
+          bareMessage: firstLine,
+          notes: [],
+          references: [],
+          breaking: false,
+        });
+      }
+      if (extras.length > 0) {
+        augmentedCommits = commits.concat(extras);
+      }
+    }
+
+    const changelogCommits = augmentedCommits.map(commit => {
+      // Map unknown types like JIRA keys (ABC-123) into 'others'
+      const normalizedType =
+        sectionTypes.includes(commit.type) || !jiraLike.test(commit.type)
+          ? commit.type
+          : 'others';
       const notes = commit.notes
         .filter(note => note.title === 'BREAKING CHANGE')
         .map(note =>
@@ -107,7 +147,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       return {
         body: '', // commit.body,
         subject: htmlEscape(commit.bareMessage),
-        type: commit.type,
+        type: normalizedType,
         scope: commit.scope,
         notes,
         references: commit.references,

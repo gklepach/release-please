@@ -414,9 +414,12 @@ export function parseConventionalCommits(
     for (const commitMessage of splitMessages(
       preprocessCommitMessage(commit)
     )) {
-      let parsedAny = false;
       try {
         for (const parsedCommit of parseCommits(commitMessage)) {
+          if (!parsedCommit.type) {
+            // Skip non-conventional messages (no type)
+            continue;
+          }
           const breaking =
             parsedCommit.notes.filter(note => note.title === 'BREAKING CHANGE')
               .length > 0;
@@ -432,7 +435,6 @@ export function parseConventionalCommits(
             references: parsedCommit.references,
             breaking,
           });
-          parsedAny = true;
         }
       } catch (_err) {
         logger.debug(
@@ -441,25 +443,6 @@ export function parseConventionalCommits(
           }`
         );
         logger.debug(`error message: ${_err}`);
-      }
-      // If the commit message segment did not yield any conventional commit,
-      // include it as a generic Others entry so it shows up in the changelog.
-      if (!parsedAny) {
-        const firstLine = commitMessage.split(/\r?\n/)[0].trim();
-        if (firstLine) {
-          conventionalCommits.push({
-            sha: commit.sha,
-            message: firstLine,
-            files: commit.files,
-            pullRequest: commit.pullRequest,
-            type: 'others',
-            scope: null,
-            bareMessage: firstLine,
-            notes: [],
-            references: [],
-            breaking: false,
-          });
-        }
       }
     }
   }
