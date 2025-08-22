@@ -85,6 +85,17 @@ exports['DefaultChangelogNotes buildNotes should include non-conventional commit
 * This is a plain commit without type ([ab40cd2](https://github.com/googleapis/java-asset/commit/ab40cd28e1752235bf5a3895c7f6f692))
 `
 
+exports['DefaultChangelogNotes buildNotes should link tracker keys when trackerUrl/prefixes provided 1'] = `
+## [1.2.3](https://github.com/googleapis/java-asset/compare/v1.2.2...v1.2.3) (1983-10-10)
+
+
+### Others
+
+* [[QA-12](https://linear.app/aiphoria-ai/issue/QA-12)] hotfix applied ([949416f](https://github.com/googleapis/java-asset/commit/949416f543932a0e048f9496aeea50ea))
+* [INFRA-893](https://linear.app/aiphoria-ai/issue/INFRA-893) test something ([25d2520](https://github.com/googleapis/java-asset/commit/25d2520c757732bc03068f7a20e4dd1b))
+* MISC change without key ([a9dd044](https://github.com/googleapis/java-asset/commit/a9dd04490dd7b77c174df1698f7502cc))
+`
+
 exports['DefaultChangelogNotes buildNotes with commit parsing handles Release-As footers 1'] = `
 ## [1.2.3](https://github.com/googleapis/java-asset/compare/v1.2.2...v1.2.3) (1983-10-10)
 

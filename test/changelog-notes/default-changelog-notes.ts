@@ -82,12 +82,35 @@ describe('DefaultChangelogNotes', () => {
         buildMockCommit('another random line'),
       ];
       const parsed = parseConventionalCommits(rawCommits);
-      const notes = await changelogNotes.buildNotes(parsed, notesOptions);
+      const notes = await changelogNotes.buildNotes(parsed, {
+        ...notesOptions,
+        commits: rawCommits,
+      });
       expect(notes).to.be.a('string');
       // Ensure the Others section is present with entries
       expect(notes).to.contain('### Others');
       expect(notes).to.contain('This is a plain commit without type');
       expect(notes).to.contain('another random line');
+      safeSnapshot(notes);
+    });
+    it('should link tracker keys when trackerUrl/prefixes provided', async () => {
+      const changelogNotes = new DefaultChangelogNotes();
+      const rawCommits = [
+        buildMockCommit('INFRA-893 test something'),
+        buildMockCommit('[QA-12] hotfix applied'),
+        buildMockCommit('MISC change without key'),
+      ];
+      const parsed = parseConventionalCommits(rawCommits);
+      const notes = await changelogNotes.buildNotes(parsed, {
+        ...notesOptions,
+        commits: rawCommits,
+        trackerUrl: 'https://linear.app/aiphoria-ai/issue/',
+        trackerList: ['INFRA', 'QA'],
+      });
+      expect(notes).to.contain('[INFRA-893](https://linear.app/aiphoria-ai/issue/INFRA-893)');
+      expect(notes).to.contain('[QA-12](https://linear.app/aiphoria-ai/issue/QA-12)');
+      // MISC should not be linked
+      expect(notes).to.contain('MISC change without key');
       safeSnapshot(notes);
     });
     it('should include JIRA-like colon commits under Others', async () => {
