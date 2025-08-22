@@ -73,6 +73,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       this.headerPartial || preset.writerOpts.headerPartial;
     preset.writerOpts.mainTemplate =
       this.mainTemplate || preset.writerOpts.mainTemplate;
+    const jiraHeader = /^(\[[A-Z][A-Z0-9]+-\d+\]|[A-Z][A-Z0-9]+-\d+):\s/;
     const changelogCommits = commits.map(commit => {
       const notes = commit.notes
         .filter(note => note.title === 'BREAKING CHANGE')
@@ -84,10 +85,16 @@ export class DefaultChangelogNotes implements ChangelogNotes {
             context.repository
           )
         );
+      const headerLine = commit.message;
+      const isJiraHeader = jiraHeader.test(headerLine);
+      const subject = isJiraHeader
+        ? htmlEscape(headerLine)
+        : htmlEscape(commit.bareMessage);
+      const type = isJiraHeader ? 'others' : commit.type;
       return {
         body: '', // commit.body,
-        subject: htmlEscape(commit.bareMessage),
-        type: commit.type,
+        subject,
+        type,
         scope: commit.scope,
         notes,
         references: commit.references,
