@@ -360,7 +360,15 @@ export abstract class BaseStrategy implements Strategy {
       latestRelease,
       commits
     );
-    if (!bumpOnlyOptions && this.changelogEmpty(releaseNotesBody)) {
+    // If release notes appear empty but we augmented with Others commits,
+    // proceed anyway to open a PR (ensures non-conventional commits create a patch release).
+    const augmentedAddedExtras =
+      augmentedConventionalCommits.length > conventionalCommits.length;
+    if (
+      !bumpOnlyOptions &&
+      this.changelogEmpty(releaseNotesBody) &&
+      !augmentedAddedExtras
+    ) {
       this.logger.info(
         `No user facing commits found since ${
           latestRelease ? latestRelease.sha : 'beginning of time'
