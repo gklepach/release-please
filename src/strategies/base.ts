@@ -126,6 +126,9 @@ export abstract class BaseStrategy implements Strategy {
 
   // Raw commits for release notes augmentation
   private latestRawCommits?: Commit[];
+  // Tracker integration (passed via dynamic factory options)
+  protected trackerUrl?: string;
+  protected trackerList?: string;
 
   constructor(options: BaseStrategyOptions) {
     this.logger = options.logger ?? defaultLogger;
@@ -158,6 +161,9 @@ export abstract class BaseStrategy implements Strategy {
     this.initialVersion = options.initialVersion;
     this.extraLabels = options.extraLabels || [];
     this.dateFormat = options.dateFormat || DEFAULT_DATE_FORMAT;
+    // propagate tracker options if present (factory sets them on options dynamically)
+    this.trackerUrl = (options as any).trackerUrl;
+    this.trackerList = (options as any).trackerList;
   }
 
   /**
