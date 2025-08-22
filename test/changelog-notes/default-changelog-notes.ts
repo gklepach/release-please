@@ -75,6 +75,21 @@ describe('DefaultChangelogNotes', () => {
       expect(notes).to.is.string;
       safeSnapshot(notes);
     });
+    it('should include non-conventional commits under Others', async () => {
+      const changelogNotes = new DefaultChangelogNotes();
+      const rawCommits = [
+        buildMockCommit('This is a plain commit without type'),
+        buildMockCommit('another random line'),
+      ];
+      const parsed = parseConventionalCommits(rawCommits);
+      const notes = await changelogNotes.buildNotes(parsed, notesOptions);
+      expect(notes).to.be.a('string');
+      // Ensure the Others section is present with entries
+      expect(notes).to.contain('### Others');
+      expect(notes).to.contain('This is a plain commit without type');
+      expect(notes).to.contain('another random line');
+      safeSnapshot(notes);
+    });
     it('should build with custom changelog sections', async () => {
       const changelogNotes = new DefaultChangelogNotes();
       const notes = await changelogNotes.buildNotes(commits, {

@@ -63,9 +63,29 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     };
 
     const config: {[key: string]: ChangelogSection[]} = {};
-    if (options.changelogSections) {
-      config.types = options.changelogSections;
+    // Always ensure an "Others" visible section exists so non-conventional
+    // commits are included in the generated notes without extra config.
+    const defaultTypes: ChangelogSection[] = [
+      {type: 'feat', section: 'Features'},
+      {type: 'fix', section: 'Bug Fixes'},
+      {type: 'perf', section: 'Performance Improvements'},
+      {type: 'deps', section: 'Dependencies'},
+      {type: 'revert', section: 'Reverts'},
+      {type: 'docs', section: 'Documentation'},
+      {type: 'style', section: 'Styles', hidden: true},
+      {type: 'chore', section: 'Miscellaneous Chores', hidden: true},
+      {type: 'refactor', section: 'Code Refactoring', hidden: true},
+      {type: 'test', section: 'Tests', hidden: true},
+      {type: 'build', section: 'Build System', hidden: true},
+      {type: 'ci', section: 'Continuous Integration', hidden: true},
+    ];
+    const types: ChangelogSection[] = options.changelogSections
+      ? [...options.changelogSections]
+      : defaultTypes;
+    if (!types.find(t => t.type === 'others')) {
+      types.push({type: 'others', section: 'Others'});
     }
+    config.types = types;
     const preset = await presetFactory(config);
     preset.writerOpts.commitPartial =
       this.commitPartial || preset.writerOpts.commitPartial;
