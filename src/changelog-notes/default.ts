@@ -172,26 +172,18 @@ export class DefaultChangelogNotes implements ChangelogNotes {
 
     // Writer sometimes renders только заголовок выпуска без секций.
     const hasSectionsOrBullets = /\n###\s|\n\*\s/.test(rendered);
-    if (rendered.length > 0 && hasSectionsOrBullets) return rendered;
+    // If writer produced sections/bullets, we still may want to append Others below
 
     // Fallback: если writer вернул пусто (или только заголовок), а Others есть — дорисуем вручную
     const others = changelogCommits.filter(c => c.type === 'others');
     if (others.length > 0) {
       const lines: string[] = [];
-      if (rendered.length > 0 && !hasSectionsOrBullets) {
-        // Только заголовок — добавим Others целиком
+      if (rendered.length > 0) {
         lines.push(rendered);
-        lines.push('');
-        lines.push('### Others');
-      } else if (rendered.length > 0) {
-        // Есть секции — добавим Others в конец
-        lines.push(rendered);
-        lines.push('');
-        lines.push('### Others');
-      } else {
-        // Пусто — просто Others
-        lines.push('### Others');
       }
+      // Add Others section at the end
+      if (lines.length > 0) lines.push('');
+      lines.push('### Others');
       lines.push('');
       for (const c of others) {
         const shortSha = (c as any).hash || '';
