@@ -107,12 +107,19 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       .parseArray(changelogCommits, context, preset.writerOpts)
       .trim();
 
-    if (rendered.length > 0) return rendered;
+    // Writer sometimes renders только заголовок выпуска без секций.
+    const hasSectionsOrBullets = /\n###\s|\n\*\s/.test(rendered);
+    if (rendered.length > 0 && hasSectionsOrBullets) return rendered;
 
-    // Fallback: if writer produced empty output but we have Others, render them manually
+    // Fallback: если writer вернул пусто (или только заголовок), а Others есть — дорисуем вручную
     const others = changelogCommits.filter(c => c.type === 'others');
     if (others.length > 0) {
       const lines: string[] = [];
+      // Сохраняем заголовок версии, если writer его сгенерировал:
+      if (rendered.length > 0 && !hasSectionsOrBullets) {
+        lines.push(rendered);
+        lines.push('');
+      }
       lines.push('### Others');
       lines.push('');
       for (const c of others) {
