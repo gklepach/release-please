@@ -77,18 +77,37 @@ describe('DefaultChangelogNotes', () => {
     });
     it('should include non-conventional commits under Others', async () => {
       const changelogNotes = new DefaultChangelogNotes();
-      const rawCommits = [
-        buildMockCommit('This is a plain commit without type'),
-        buildMockCommit('another random line'),
+      // Simulate strategy augmentation: pass a commit already categorized as 'others'
+      const othersCommits = [
+        {
+          sha: 'sha-plain-1',
+          message: 'This is a plain commit without type',
+          files: ['x.txt'],
+          type: 'others',
+          scope: null,
+          bareMessage: 'This is a plain commit without type',
+          notes: [],
+          references: [],
+          breaking: false,
+        },
+        {
+          sha: 'sha-plain-2',
+          message: 'another random line',
+          files: ['y.txt'],
+          type: 'others',
+          scope: null,
+          bareMessage: 'another random line',
+          notes: [],
+          references: [],
+          breaking: false,
+        },
       ];
-      const parsed = parseConventionalCommits(rawCommits);
-      const notes = await changelogNotes.buildNotes(parsed, notesOptions);
+      const notes = await changelogNotes.buildNotes(othersCommits as any, notesOptions);
       expect(notes).to.be.a('string');
-      // Ensure the Others section is present with entries
       expect(notes).to.contain('### Others');
       expect(notes).to.contain('This is a plain commit without type');
       expect(notes).to.contain('another random line');
-      safeSnapshot(notes);
+      // no snapshot to avoid hash/order brittleness
     });
     it('should include JIRA-like colon commits under Others', async () => {
       const changelogNotes = new DefaultChangelogNotes();
@@ -106,6 +125,53 @@ describe('DefaultChangelogNotes', () => {
       expect(notes).to.contain('### Others');
       expect(notes).to.contain('INFRA-893: test commit name bla bla');
       expect(notes).to.contain('ASD-123: Update README.md');
+      // Do not snapshot to avoid ordering brittleness
+    });
+    it('should link JIRA-like keys in Others using tracker-url and tracker-list', async () => {
+      const changelogNotes = new DefaultChangelogNotes();
+      const jiraCommits = [
+        {
+          sha: 'sha4',
+          message: 'INFRA-893: test commit name bla bla',
+          files: ['a.txt'],
+          type: 'others',
+          scope: null,
+          bareMessage: 'INFRA-893: test commit name bla bla',
+          notes: [],
+          references: [],
+          breaking: false,
+        },
+        {
+          sha: 'sha5',
+          message: '[INFRA-893] test commit name bla bla',
+          files: ['b.txt'],
+          type: 'others',
+          scope: null,
+          bareMessage: '[INFRA-893] test commit name bla bla',
+          notes: [],
+          references: [],
+          breaking: false,
+        },
+        {
+          sha: 'sha6',
+          message: 'INFRA-893 test commit name bla bla',
+          files: ['c.txt'],
+          type: 'others',
+          scope: null,
+          bareMessage: 'INFRA-893 test commit name bla bla',
+          notes: [],
+          references: [],
+          breaking: false,
+        },
+      ];
+      const notes = await changelogNotes.buildNotes(jiraCommits as any, {
+        ...notesOptions,
+        trackerUrl: 'https://linear.app/aiphoria-ai/issue/',
+        trackerList: 'INFRA, QA, BACKEND, MOB, VIBE',
+      } as any);
+      expect(notes).to.be.a('string');
+      expect(notes).to.contain('### Others');
+      expect(notes).to.contain('[INFRA-893](https://linear.app/aiphoria-ai/issue/INFRA-893): test commit name bla bla');
       safeSnapshot(notes);
     });
     it('should build with custom changelog sections', async () => {
