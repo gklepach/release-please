@@ -103,9 +103,30 @@ export class DefaultChangelogNotes implements ChangelogNotes {
       };
     });
 
-    return conventionalChangelogWriter
+    const rendered = conventionalChangelogWriter
       .parseArray(changelogCommits, context, preset.writerOpts)
       .trim();
+
+    if (rendered.length > 0) return rendered;
+
+    // Fallback: if writer produced empty output but we have Others, render them manually
+    const others = changelogCommits.filter(c => c.type === 'others');
+    if (others.length > 0) {
+      const lines: string[] = [];
+      lines.push('### Others');
+      lines.push('');
+      for (const c of others) {
+        const shortSha = (c as any).hash || c.hash || c.sha;
+        const sha7 = shortSha ? String(shortSha).slice(0, 7) : '';
+        const link = sha7
+          ? `([${sha7}](${context.host}/${context.owner}/${context.repository}/commit/${shortSha}))`
+          : '';
+        lines.push(`* ${c.subject} ${link}`.trim());
+      }
+      return lines.join('\n');
+    }
+
+    return rendered;
   }
 }
 
