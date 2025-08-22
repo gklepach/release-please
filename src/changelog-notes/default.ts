@@ -116,6 +116,11 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         }
       }
       const type = isJiraHeader ? 'others' : commit.type;
+      // Some templates render using `header` instead of `subject`.
+      // To ensure links appear in Others, align header with subject when JIRA header is detected.
+      const headerOut = isJiraHeader && (options as any).trackerUrl
+        ? subject
+        : commit.message;
       return {
         body: '', // commit.body,
         subject,
@@ -126,7 +131,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
         mentions: [],
         merge: null,
         revert: null,
-        header: commit.message,
+        header: headerOut,
         footer: commit.notes
           .filter(note => note.title === 'RELEASE AS')
           .map(note => `Release-As: ${note.text}`)
