@@ -66,12 +66,7 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     if (options.changelogSections) {
       config.types = options.changelogSections;
     }
-    preset.writerOpts.commitPartial =
-      this.commitPartial || preset.writerOpts.commitPartial;
-    preset.writerOpts.headerPartial =
-      this.headerPartial || preset.writerOpts.headerPartial;
-    preset.writerOpts.mainTemplate =
-      this.mainTemplate || preset.writerOpts.mainTemplate;
+    // preset will be created after we ensure sections and possibly add Others
     const jiraHeader = /^(\[[A-Z][A-Z0-9]+-\d+\]|[A-Z][A-Z0-9]+-\d+):\s/;
     const trackerPrefixes = options.trackerList && options.trackerList.length > 0 ? options.trackerList : undefined;
     const trackerUrl = options.trackerUrl;
@@ -172,6 +167,12 @@ export class DefaultChangelogNotes implements ChangelogNotes {
     }
 
     const preset = await presetFactory(config);
+    preset.writerOpts.commitPartial =
+      this.commitPartial || preset.writerOpts.commitPartial;
+    preset.writerOpts.headerPartial =
+      this.headerPartial || preset.writerOpts.headerPartial;
+    preset.writerOpts.mainTemplate =
+      this.mainTemplate || preset.writerOpts.mainTemplate;
 
     const rendered = conventionalChangelogWriter
       .parseArray(changelogCommits, context, preset.writerOpts)
